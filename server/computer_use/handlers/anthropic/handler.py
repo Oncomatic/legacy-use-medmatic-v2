@@ -49,7 +49,7 @@ class AnthropicHandler(BaseProviderHandler):
         tool_beta_flag: Optional[str] = None,
         token_efficient_tools_beta: bool = False,
         only_n_most_recent_images: Optional[int] = None,
-        max_retries: int = 2,
+        max_retries: int = 6,
         **kwargs,
     ):
         """
@@ -89,10 +89,12 @@ class AnthropicHandler(BaseProviderHandler):
         if self.provider == APIProvider.ANTHROPIC:
             # Prefer tenant-specific key if available
             tenant_key = self.tenant_setting('ANTHROPIC_API_KEY')
-            client = AsyncAnthropic(api_key=tenant_key or api_key, max_retries=4)
+            client = AsyncAnthropic(
+                api_key=tenant_key or api_key, max_retries=self.max_retries
+            )
 
         elif self.provider == APIProvider.VERTEX:
-            client = AsyncAnthropicVertex()
+            client = AsyncAnthropicVertex(max_retries=self.max_retries)
 
         elif self.provider == APIProvider.BEDROCK:
             # AWS credentials from tenant settings (fallback to env settings)
@@ -119,6 +121,7 @@ class AnthropicHandler(BaseProviderHandler):
                 aws_access_key=aws_access_key or None,
                 aws_secret_key=aws_secret_key or None,
                 aws_session_token=aws_session_token or None,
+                max_retries=self.max_retries,
             )
         elif self.provider == APIProvider.LEGACYUSE_PROXY:
             proxy_key = self.tenant_setting('LEGACYUSE_PROXY_API_KEY') or getattr(
@@ -128,11 +131,11 @@ class AnthropicHandler(BaseProviderHandler):
                 raise ValueError(
                     'LEGACYUSE_PROXY_API_KEY is required for LegacyUseClient'
                 )
-            client = LegacyUseClient(api_key=proxy_key)
+            client = LegacyUseClient(api_key=proxy_key, max_retries=self.max_retries)
         else:
             raise ValueError(f'Unsupported Anthropic provider: {self.provider}')
 
-        client = instructor.from_anthropic(client, max_retries=self.max_retries)
+        client = instructor.from_anthropic(client)
         return client
 
     def prepare_system(self, system_prompt: str) -> Iterable[BetaTextBlockParam]:
