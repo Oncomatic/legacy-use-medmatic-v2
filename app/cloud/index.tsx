@@ -11,7 +11,10 @@ export default function CloudApp() {
       <ThemeProvider>
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           <h1>Configuration Error</h1>
-          <p>Missing Publishable Key. Please set VITE_CLERK_PUBLISHABLE_KEY in your environment variables.</p>
+          <p>
+            Missing Publishable Key. Please set VITE_CLERK_PUBLISHABLE_KEY in your environment
+            variables.
+          </p>
         </div>
       </ThemeProvider>
     );
