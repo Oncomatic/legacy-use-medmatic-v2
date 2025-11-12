@@ -5,11 +5,18 @@ import ThemeProvider from './providers/theme';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-if (!PUBLISHABLE_KEY) {
-  throw new Error('Missing Publishable Key');
-}
-
 export default function CloudApp() {
+  if (!PUBLISHABLE_KEY) {
+    return (
+      <ThemeProvider>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h1>Configuration Error</h1>
+          <p>Missing Publishable Key. Please set VITE_CLERK_PUBLISHABLE_KEY in your environment variables.</p>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
