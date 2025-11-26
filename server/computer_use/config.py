@@ -22,7 +22,11 @@ class APIProvider(StrEnum):
 
 PROVIDER_TO_DEFAULT_MODEL_NAME: dict[APIProvider, str] = {
     APIProvider.ANTHROPIC: 'claude-sonnet-4-20250514',
-    APIProvider.BEDROCK: 'eu.anthropic.claude-sonnet-4-20250514-v1:0',
+    # APIProvider.BEDROCK: 'eu.anthropic.claude-3-7-sonnet-20250219-v1:0', # sonnet 3.7
+    # APIProvider.BEDROCK: 'eu.anthropic.claude-sonnet-4-20250514-v1:0', # sonnet 4
+    # APIProvider.BEDROCK: 'eu.anthropic.claude-haiku-4-5-20251001-v1:0', # haiku 4.5
+    APIProvider.BEDROCK: 'eu.anthropic.claude-sonnet-4-5-20250929-v1:0',  # sonnet 4.5
+    # APIProvider.BEDROCK: 'eu.anthropic.claude-opus-4-5-20251101-v1:0', # opus 4.5
     APIProvider.VERTEX: 'claude-sonnet-4@20250514',
     APIProvider.LEGACYUSE_PROXY: 'legacy-use-sonnet-4',  # model selection is handled server side
     APIProvider.OPENAI: 'gpt-5',
