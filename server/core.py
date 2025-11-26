@@ -13,6 +13,7 @@ from server.computer_use import (
     get_default_model_name,
     get_tool_version,
     sampling_loop,
+    validate_provider,
 )
 from server.computer_use.tools import ToolResult
 from server.models.base import (
@@ -85,6 +86,8 @@ class APIGatewayCore:
         api_response_callback: Optional[ApiResponseCallback] = None,
         output_callback: Optional[Callable[[Any], None]] = None,
         session_id: str = None,
+        model_override: Optional[str] = None,
+        provider_override: Optional[str] = None,
     ) -> APIResponse:
         """Execute an API by name with the given parameters."""
         # Load API definitions fresh from the database
@@ -170,11 +173,17 @@ class APIGatewayCore:
             )
 
             # Execute the API call - sampling_loop will handle saving the messages if it receives any
+            model = model_override or self.model
+            provider = (
+                validate_provider(provider_override)
+                if provider_override
+                else self.provider
+            )
             result, exchanges = await sampling_loop(
                 job_id=job_id,
                 db_tenant=self.db_tenant,
-                model=self.model,
-                provider=self.provider,
+                model=model,
+                provider=provider,
                 system_prompt_suffix='',  # No additional suffix needed
                 messages=messages,
                 output_callback=output_callback or (lambda x: None),
