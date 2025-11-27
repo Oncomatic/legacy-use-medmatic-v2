@@ -341,6 +341,8 @@ class JobCreate(BaseModel):
     api_name: str
     parameters: Dict[str, Union[str, List[Any]]] = {}
     status: JobStatus = JobStatus.PENDING
+    model: Optional[str] = None
+    provider: Optional[str] = None
 
 
 class JobUpdate(BaseModel):

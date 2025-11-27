@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     API_KEY_NAME: str = 'X-API-Key'
 
     # Maximum number of tokens (input + output) allowed per job
-    TOKEN_LIMIT: int = 500000
+    TOKEN_LIMIT: int = 1_000_000
 
     GOOGLE_GENAI_API_KEY: str | None = None
 
