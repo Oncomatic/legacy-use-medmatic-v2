@@ -160,6 +160,8 @@ async def create_session(
         'HEIGHT': str(target.get('height', 768)),
         # RDP customization
         'RDP_PARAMS': target.get('rdp_params'),
+        'RDP_FILE': target.get('rdp_file'),
+        'AVD_ACCESS_TOKEN': target.get('avd_access_token'),
     }
 
     # Launch Docker container for the session

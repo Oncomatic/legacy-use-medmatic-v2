@@ -162,6 +162,8 @@ class Target(BaseModel):
     is_archived: bool = False
     # RDP customization
     rdp_params: Optional[str] = None
+    rdp_file: Optional[str] = None  # Base64-encoded .rdpw file content
+    avd_access_token: Optional[str] = None  # Azure AD access token for AVD
     queue_status: Optional[str] = (
         None  # Added field for queue status: "running" or "paused"
     )
@@ -179,7 +181,7 @@ class Target(BaseModel):
 class TargetCreate(BaseModel):
     name: str
     type: TargetType
-    host: str
+    host: Optional[str] = None
     username: Optional[str] = None
     password: str
     port: Optional[int] = None
@@ -190,6 +192,8 @@ class TargetCreate(BaseModel):
     height: int = 768
     # RDP customization
     rdp_params: Optional[str] = None
+    rdp_file: Optional[str] = None  # Base64-encoded .rdpw file content
+    avd_access_token: Optional[str] = None  # Azure AD access token for AVD
 
 
 class TargetUpdate(BaseModel):
@@ -206,6 +210,8 @@ class TargetUpdate(BaseModel):
     height: Optional[int] = None
     # RDP customization
     rdp_params: Optional[str] = None
+    rdp_file: Optional[str] = None  # Base64-encoded .rdpw file content
+    avd_access_token: Optional[str] = None  # Azure AD access token for AVD
 
 
 class Session(BaseModel):

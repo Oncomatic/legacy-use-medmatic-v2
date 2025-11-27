@@ -51,11 +51,14 @@ const CreateTarget = () => {
     width: 1024,
     height: 768,
     rdp_params: '',
+    rdp_file: '',
+    avd_access_token: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [rdpFileName, setRdpFileName] = useState<string>('');
 
   // Check if OpenVPN is allowed based on environment variable
   const isOpenVPNAllowed = import.meta.env.VITE_ALLOW_OPENVPN === 'true';
@@ -103,6 +106,24 @@ const CreateTarget = () => {
     setTargetData(prev => ({ ...prev, type, port }));
   };
 
+  const handleRdpFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = btoa(reader.result as string);
+      setTargetData(prev => ({ ...prev, rdp_file: base64 }));
+      setRdpFileName(file.name);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleClearRdpFile = () => {
+    setTargetData(prev => ({ ...prev, rdp_file: '' }));
+    setRdpFileName('');
+  };
+
   const handleRecommendedResolutionClick = ({
     width,
     height,
@@ -124,8 +145,9 @@ const CreateTarget = () => {
       errors.type = 'Type is required';
     }
 
-    if (!targetData.host.trim()) {
-      errors.host = 'Host is required';
+    // Host is required unless rdp_file is provided (Azure Virtual Desktop)
+    if (!targetData.rdp_file && !targetData.host?.trim()) {
+      errors.host = 'Host is required (unless using Azure Virtual Desktop .rdpw file)';
     }
 
     if (!targetData.password.trim()) {
@@ -275,9 +297,9 @@ const CreateTarget = () => {
                 value={targetData.host}
                 onChange={handleChange}
                 error={!!validationErrors.host}
-                helperText={validationErrors.host}
+                helperText={validationErrors.host || (targetData.rdp_file ? 'Optional when using .rdpw file' : undefined)}
                 disabled={loading}
-                required
+                required={!targetData.rdp_file}
                 placeholder="hostname or IP address"
               />
             </Grid>
@@ -409,19 +431,67 @@ const CreateTarget = () => {
 
             {/* RDP customization options */}
             {(targetData.type.startsWith('rdp') || targetData.type.includes('rdp')) && (
-              <Grid size={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  label="FreeRDP parameters"
-                  name="rdp_params"
-                  value={targetData.rdp_params}
-                  onChange={handleChange}
-                  disabled={loading}
-                  placeholder="Defaults: /f +auto-reconnect +clipboard /cert:ignore. You can add or override here. Username (/u), Password (/p) and Host (/v) are always included."
-                />
-              </Grid>
+              <>
+                <Grid size={12}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                      Azure Virtual Desktop (.rdpw file)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Upload a .rdpw file from Azure Virtual Desktop. When provided, the host field
+                      becomes optional.
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Button variant="outlined" component="label" disabled={loading}>
+                        {rdpFileName ? 'Change File' : 'Upload .rdpw File'}
+                        <input
+                          type="file"
+                          hidden
+                          accept=".rdpw,.rdp"
+                          onChange={handleRdpFileUpload}
+                        />
+                      </Button>
+                      {rdpFileName && (
+                        <>
+                          <Typography variant="body2">{rdpFileName}</Typography>
+                          <Button size="small" color="error" onClick={handleClearRdpFile}>
+                            Clear
+                          </Button>
+                        </>
+                      )}
+                    </Box>
+                  </Box>
+                </Grid>
+                {targetData.rdp_file && (
+                  <Grid size={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      label="Azure AD Access Token (for headless AVD authentication)"
+                      name="avd_access_token"
+                      value={targetData.avd_access_token}
+                      onChange={handleChange}
+                      disabled={loading}
+                      placeholder="Required for headless Azure Virtual Desktop connections. Obtain from Azure AD OAuth2 flow."
+                      helperText="Without this token, interactive Azure AD authentication will be required (not supported in headless mode)."
+                    />
+                  </Grid>
+                )}
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    label="FreeRDP parameters"
+                    name="rdp_params"
+                    value={targetData.rdp_params}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="Defaults: /f +auto-reconnect +clipboard /cert:ignore. You can add or override here. Username (/u), Password (/p) and Host (/v) are always included."
+                  />
+                </Grid>
+              </>
             )}
 
             {/* Resolution recommendation warning */}

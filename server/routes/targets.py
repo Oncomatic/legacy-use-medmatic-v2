@@ -37,6 +37,10 @@ async def list_targets(
         # Ensure new fields exist in response (defaulting if missing)
         if 'rdp_params' not in target:
             target['rdp_params'] = None
+        if 'rdp_file' not in target:
+            target['rdp_file'] = None
+        if 'avd_access_token' not in target:
+            target['avd_access_token'] = None
 
         # Add active session status to each target
         target['has_active_session'] = db_tenant.has_active_session_for_target(
@@ -100,6 +104,10 @@ async def update_target(
     updated_target['blocking_jobs_count'] = blocking_info['blocking_jobs_count']
     if 'rdp_params' not in updated_target:
         updated_target['rdp_params'] = None
+    if 'rdp_file' not in updated_target:
+        updated_target['rdp_file'] = None
+    if 'avd_access_token' not in updated_target:
+        updated_target['avd_access_token'] = None
 
     capture_target_updated(request, target_id, target)
 

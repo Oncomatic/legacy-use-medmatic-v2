@@ -61,6 +61,8 @@ class Target(Base):
     is_archived = Column(Boolean, default=False)
     # RDP customization
     rdp_params = Column(String, nullable=True)
+    rdp_file = Column(String, nullable=True)  # Base64-encoded .rdpw file content
+    avd_access_token = Column(String, nullable=True)  # Azure AD access token for AVD
 
     sessions = relationship(
         'Session', back_populates='target', cascade='all, delete-orphan'

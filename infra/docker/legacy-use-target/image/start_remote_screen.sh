@@ -100,22 +100,60 @@ if [ "$REMOTE_CLIENT_TYPE" = 'rdp' ]; then
             export FREERDP_CONNECT_TIMEOUT=30
         fi
 
-        # Build argv as array; no quotes after the colon
-        ARGS=(/u:${REMOTE_USERNAME} /p:${REMOTE_PASSWORD} /v:${HOST_IP}:${HOST_PORT})
+        # Check if RDP_FILE is provided (Azure Virtual Desktop mode)
+        if [ -n "${RDP_FILE}" ]; then
+            echo "Azure Virtual Desktop mode: using .rdpw file"
+            # Decode base64 content to file
+            echo "${RDP_FILE}" | base64 -d > /tmp/connection.rdpw
 
-        if [ -n "${RDP_PARAMS}" ]; then
-            # Parse RDP_PARAMS handling both quoted and unquoted parameters safely
-            echo "Parsing RDP_PARAMS: ${RDP_PARAMS}"
+            # Build args for Azure Virtual Desktop connection
+            # The .rdpw file MUST be the first argument
+            ARGS=(/tmp/connection.rdpw /network:auto /cert:ignore)
 
-            # Use eval with array assignment to properly handle quoted strings
-            # This is safe because we control the input and only use it for array assignment
-            declare -a EXTRA=()
-            eval "EXTRA=(${RDP_PARAMS})"
+            # Add Azure AD access token if provided (required for headless AVD auth)
+            if [ -n "${AVD_ACCESS_TOKEN}" ]; then
+                echo "Using provided Azure AD access token for authentication"
+                ARGS+=(/gateway:type:arm /gateway:access-token:"${AVD_ACCESS_TOKEN}")
+            else
+                echo "WARNING: No AVD_ACCESS_TOKEN provided - interactive Azure AD auth will be required"
+                ARGS+=(/gateway:type:arm /sec:aad)
+            fi
 
-            ARGS+=("${EXTRA[@]}")
-            echo "Parsed RDP parameters: ${EXTRA[@]}"
+            # Add Windows session credentials if provided
+            if [ -n "${REMOTE_USERNAME}" ]; then
+                ARGS+=(/u:"${REMOTE_USERNAME}")
+            fi
+            if [ -n "${REMOTE_PASSWORD}" ]; then
+                ARGS+=(/p:"${REMOTE_PASSWORD}")
+            fi
+
+            # Add extra RDP params if provided
+            if [ -n "${RDP_PARAMS}" ]; then
+                echo "Parsing additional RDP_PARAMS: ${RDP_PARAMS}"
+                declare -a EXTRA=()
+                eval "EXTRA=(${RDP_PARAMS})"
+                ARGS+=("${EXTRA[@]}")
+                echo "Parsed RDP parameters: ${EXTRA[@]}"
+            fi
         else
-            ARGS+=(/f +auto-reconnect +clipboard /cert:ignore)
+            # Standard RDP mode
+            # Build argv as array; no quotes after the colon
+            ARGS=(/u:${REMOTE_USERNAME} /p:${REMOTE_PASSWORD} /v:${HOST_IP}:${HOST_PORT})
+
+            if [ -n "${RDP_PARAMS}" ]; then
+                # Parse RDP_PARAMS handling both quoted and unquoted parameters safely
+                echo "Parsing RDP_PARAMS: ${RDP_PARAMS}"
+
+                # Use eval with array assignment to properly handle quoted strings
+                # This is safe because we control the input and only use it for array assignment
+                declare -a EXTRA=()
+                eval "EXTRA=(${RDP_PARAMS})"
+
+                ARGS+=("${EXTRA[@]}")
+                echo "Parsed RDP parameters: ${EXTRA[@]}"
+            else
+                ARGS+=(/f +auto-reconnect +clipboard /cert:ignore)
+            fi
         fi
 
         # Show current DNS configuration for debugging
@@ -126,7 +164,7 @@ if [ "$REMOTE_CLIENT_TYPE" = 'rdp' ]; then
             ip route 2>/dev/null | head -10 || echo "Could not show routes"
         fi
 
-        $PROXY_CMD xfreerdp3 "${ARGS[@]}"
+        $PROXY_CMD xfreerdp "${ARGS[@]}"
 
         echo "RDP connection failed, retrying in 3 sec..."
         sleep 3
