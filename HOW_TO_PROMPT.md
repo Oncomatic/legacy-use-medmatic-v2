@@ -86,6 +86,22 @@ These are **placeholders** that will be filled with arguments provided by the **
 
 ---
 
+### Using `custom_action` with parameters
+
+- Define your custom action step text with placeholders, e.g. `Add '{{coding_string}}' and confirm with Enter.`
+- In the prompt, pass per-call parameters to `custom_action`:
+
+```
+{% for item in coding_strings %}
+- Call the `custom_action` tool with:
+  {"action_name": "add_coding_string", "input_parameters": {"coding_string": "{{ item }}"}}
+{% endfor %}
+```
+
+Per-call `input_parameters` are merged with job-level parameters; per-call values win when keys overlap.
+
+---
+
 ## Prompt Example
 
 ### Process: Create a New Entry in a Patient’s Record
