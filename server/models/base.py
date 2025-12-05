@@ -8,7 +8,16 @@ from enum import Enum, StrEnum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
+from jinja2 import Environment, StrictUndefined
 from pydantic import BaseModel, Field
+
+# Shared Jinja environment for prompt rendering
+JINJA_ENV = Environment(
+    undefined=StrictUndefined,
+    autoescape=False,
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
 
 
 class Parameter(BaseModel):
@@ -97,26 +106,26 @@ IMPORTANT INSTRUCTIONS FOR RETURNING RESULTS:
         return prompt_full
 
     def build_prompt(self, job_parameters: Dict[str, Any]) -> str:
-        """Build the prompt by substituting parameter values."""
-        prompt_text = self.full_prompt_template
+        """Build the prompt using Jinja2 templating with job parameters.
 
-        # Add current date to the parameters
-        job_parameters = job_parameters.copy()
-        job_parameters['now'] = datetime.now()  # TODO: Why is this needed?
+        Example (list parameter `coding_strings`):
+        {% for item in coding_strings %}
+        - Add '{{ item }}' and confirm with Enter.
+        {% endfor %}
+        """
+        params = job_parameters.copy()
+        params['now'] = datetime.now()  # Preserve existing behavior
 
-        # Replace parameter placeholders with actual values
-        for param_name, param_value in job_parameters.items():
-            # Support both {{param_name}} and {param_name} placeholder formats
-            placeholder_patterns = [
-                f'{{{{{param_name}}}}}',  # {{param_name}}
-                f'{{{param_name}}}',  # {param_name}
-            ]
+        template = JINJA_ENV.from_string(self.full_prompt_template)
+        prompt_text = template.render(**params)
 
-            for pattern in placeholder_patterns:
-                if pattern in prompt_text:
-                    # Convert value to string for replacement
-                    str_value = str(param_value) if param_value is not None else ''
-                    prompt_text = prompt_text.replace(pattern, str_value)
+        # Minimal backward compatibility: replace single-brace placeholders if any remain
+        for param_name, param_value in params.items():
+            single_brace = f'{{{param_name}}}'
+            if single_brace in prompt_text:
+                prompt_text = prompt_text.replace(
+                    single_brace, '' if param_value is None else str(param_value)
+                )
 
         return prompt_text
 
