@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import Any, Dict, Literal
 
@@ -26,11 +27,12 @@ class CustomActionTool(BaseAnthropicTool):
     def _get_action(self, action_name: str) -> Dict[str, Any]:
         return self.custom_actions.get(action_name.lower(), None)
 
-    def _inject_input_parameters(self, tool: Dict[str, Any]) -> Dict[str, Any]:
-        if not self.input_parameters:
-            logger.info(
-                f'No input parameters found in custom action tool: {self.input_parameters}'
-            )
+    def _inject_input_parameters(
+        self, tool: Dict[str, Any], parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Replace {{param_name}} placeholders in tool parameters using provided values."""
+        if not parameters:
+            logger.info(f'No input parameters provided: {parameters}')
             return tool
         if not tool['parameters']:
             logger.info(f'No parameters found in tool: {tool}')
@@ -44,7 +46,7 @@ class CustomActionTool(BaseAnthropicTool):
             )
             return tool
 
-        for param_name, param_value in self.input_parameters.items():
+        for param_name, param_value in parameters.items():
             placeholder_patterns = '{{' + param_name + '}}'  # {{param_name}
             if placeholder_patterns in tool['parameters'].get('text'):
                 logger.info(
@@ -74,7 +76,11 @@ class CustomActionTool(BaseAnthropicTool):
                         if self.custom_actions
                         else [],
                         'description': 'The name of the custom action to perform',
-                    }
+                    },
+                    'input_parameters': {
+                        'type': 'object',
+                        'description': 'Optional key/value parameters merged with job parameters and injected into action step placeholders.',
+                    },
                 },
                 'required': ['action_name'],
             },
@@ -96,14 +102,24 @@ class CustomActionTool(BaseAnthropicTool):
                 f'Custom action tool called with action_name: {action_name}, input_parameters: {self.input_parameters}'
             )
 
+            # Merge job-level parameters with per-call parameters (per-call wins)
+            runtime_params = kwargs.get('input_parameters') or {}
+            base_params = self.input_parameters or {}
+            effective_params = {**base_params, **runtime_params}
+
             action = self._get_action(action_name)
             if not action:
                 return ToolFailure(error=f'Custom action {action_name} not found')
 
             # run all actions
-            for tool_action in action['tools']:
-                logger.info(f'Running action: {tool_action}')
-                tool_action = self._inject_input_parameters(tool_action)
+            for tool_action_def in action['tools']:
+                logger.info(f'Running action: {tool_action_def}')
+
+                # Work on a copy to avoid mutating the stored action definitions
+                tool_action = copy.deepcopy(tool_action_def)
+                tool_action = self._inject_input_parameters(
+                    tool_action, effective_params
+                )
                 result = await tool_collection.run(
                     name=tool_action['name'],
                     tool_input=tool_action['parameters'],
