@@ -33,5 +33,8 @@ def upgrade(schema: str = 'tenant') -> None:
 
 @for_each_tenant_schema
 def downgrade(schema: str = 'tenant') -> None:
-    op.drop_column('targets', 'avd_access_token', schema=schema)
-    op.drop_column('targets', 'rdp_file', schema=schema)
+    # Use raw SQL with IF EXISTS to handle cases where columns don't exist
+    op.execute(
+        sa.text(f'ALTER TABLE {schema}.targets DROP COLUMN IF EXISTS avd_access_token')
+    )
+    op.execute(sa.text(f'ALTER TABLE {schema}.targets DROP COLUMN IF EXISTS rdp_file'))
